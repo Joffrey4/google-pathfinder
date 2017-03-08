@@ -1,6 +1,10 @@
 from googlemaps.exceptions import TransportError, Timeout
 from settings import gmaps
+from src.exceptions import IllegalArgumentError, InvalidLocation
 
+
+# TODO: mettre les exceptions à la création.
+# TODO: Spécifier.
 
 class Location:
     """
@@ -37,20 +41,26 @@ class Location:
         """
         # Primary data: key, latitude, longitude and address.
         if kwargs is not None and kwargs != {}:
-            print kwargs
             self.key = kwargs.get('key')
             self.lat = kwargs.get('lat')
             self.lng = kwargs.get('lng')
             self.address = kwargs.get('address')
         else:
-            raise ValueError(
-                'You need to enter at least one parameter: key(string), lat(float) and lng(float), or address(string)')
+            raise IllegalArgumentError(
+                "You need to enter at least one parameter: key(string), lat(float) and lng(float), or address(string)")
+
+        # Secondary data:
+        self.near_stations = []
 
         # Status goes to True if this location is a valid one.
         self.status = False
 
         # Retrieve metadata of the location.
         self.get_geocode_metadata()
+
+    ##
+    #   Functions to retrieve metadata of the location
+    ##
 
     def get_geocode_from_address(self, address):
         """
@@ -112,24 +122,53 @@ class Location:
         Set the data of a place into local variables.
         """
         geocode = self.retrieve_geocode_from_valid_arguments()
-        print geocode
         if self.status:
             self.key = geocode[0]['place_id']
             self.lat = geocode[0]['geometry']['location']['lat']
             self.lng = geocode[0]['geometry']['location']['lng']
             self.address = geocode[0]['formatted_address']
 
-    # TODO: Fonction pour trouver la borne la plus proche de ce lieu
+    ##
+    #   Functions to find the nearest charging station
+    ##
 
-    def get_key_lat_lng(self):
+    def find_all_near_station(self, stations_list, radius):
         """
-        Return the latitude, longitude and the key of the place.
+        :param radius:
+        :param stations_list: [ {'id': id, 'lat': lat, 'lng': lng, 'key': key}, ... ]
+        :return:
+        """
+        if self.status:
+            for station in stations_list:
+                try:
+                    distance_between = \
+                        gmaps.distance_matrix((self.lat, self.lng), (station['lat'], station['lng']), 'driving',
+                                              'fr-FR')['rows'][0]['elements'][0]['distance']['value']
+                except (TransportError, Timeout):
+                    pass
+                else:
+                    if distance_between <= radius:
+                        self.near_stations.append((distance_between, station['id']))
+        else:
+            raise InvalidLocation('The entered location is invalid.')
 
-        :return: The key, lat and lng values. In a dictionary.
-        :rtype: {'key' : string, 'lat': float, 'lng': float}
-        """
-        return {'key': self.key, 'lat': self.lat, 'lng': self.lng}
+    def get_all_near_station(self, station_list, radius=20000):
+        self.find_all_near_station(station_list, radius)
+        return self.near_stations
+
+    def get_nearest_station(self, station_list, radius=20000):
+        self.find_all_near_station(station_list, radius)
+
+        if self.near_stations:
+            nearest_current = self.near_stations[0]
+
+            for station in self.near_stations:
+                if station[0] > nearest_current[0]:
+                    nearest_current = station
+            return nearest_current
+        else:
+            return False
 
 
 place = Location()
-print place.key
+# place.find_all_near_station([{'id': 0, 'lat': 50.4132557, 'lng': 4.0169406, 'key': "ChIJvRKTuK9FwkcRV6Jc8IqyUt4"}])

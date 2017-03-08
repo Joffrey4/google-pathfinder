@@ -1,17 +1,16 @@
 from googlemaps.exceptions import TransportError, Timeout
 from settings import gmaps
-from place import Place
+from location import Location
 from car import Car
 
 
-# TODO: Renommer en Road
-class Path:
+class Travel:
 
     def __init__(self, origin, destination, car):
         # Status goes to True if the path is valid.
         self.status = False
-        self.origin = Place(origin)
-        self.destination = Place(destination)
+        self.origin = Location(origin)
+        self.destination = Location(destination)
         self.car = car
 
         self.distance = 0
@@ -63,5 +62,5 @@ class Path:
                     distance += step['duration']
 
 car = Car('bmw', 100, 25)
-way = Path("SNCB Mons Station", "Chaussee de Beaumont 401/A, 7022 Mons, Belgique", car)
+way = Travel("SNCB Mons Station", "Chaussee de Beaumont 401/A, 7022 Mons, Belgique", car)
 print way.steps
