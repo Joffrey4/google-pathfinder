@@ -3,7 +3,6 @@ from settings import gmaps
 from src.exceptions import IllegalArgumentError, InvalidLocation
 
 
-# TODO: mettre les exceptions à la création.
 # TODO: Spécifier.
 
 class Location:
@@ -52,9 +51,6 @@ class Location:
         # Secondary data:
         self.near_stations = []
 
-        # Status goes to True if this location is a valid one.
-        self.status = False
-
         # Retrieve metadata of the location.
         self.get_geocode_metadata()
 
@@ -62,7 +58,8 @@ class Location:
     #   Functions to retrieve metadata of the location
     ##
 
-    def get_geocode_from_address(self, address):
+    @staticmethod
+    def get_geocode_from_address(address):
         """
         Retrieve data of a place from an address.
 
@@ -75,12 +72,12 @@ class Location:
         try:
             geocode_result = gmaps.geocode(address)
         except (TransportError, Timeout):
-            pass
+            raise InvalidLocation('The entered location is invalid.')
         else:
-            self.status = True
             return geocode_result
 
-    def get_geocode_from_key_or_latlng(self, key):
+    @staticmethod
+    def get_geocode_from_key_or_latlng(key):
         """
         Retrieve data of a place from a key (place_id) of from a tuple of (lat, lng).
 
@@ -93,9 +90,8 @@ class Location:
         try:
             geocode_result = gmaps.reverse_geocode(key)
         except (TransportError, Timeout):
-            pass
+            raise InvalidLocation('The entered location is invalid.')
         else:
-            self.status = True
             return geocode_result
 
     def retrieve_geocode_from_valid_arguments(self):
@@ -122,35 +118,38 @@ class Location:
         Set the data of a place into local variables.
         """
         geocode = self.retrieve_geocode_from_valid_arguments()
-        if self.status:
-            self.key = geocode[0]['place_id']
-            self.lat = geocode[0]['geometry']['location']['lat']
-            self.lng = geocode[0]['geometry']['location']['lng']
-            self.address = geocode[0]['formatted_address']
+
+        self.key = geocode[0]['place_id']
+        self.lat = geocode[0]['geometry']['location']['lat']
+        self.lng = geocode[0]['geometry']['location']['lng']
+        self.address = geocode[0]['formatted_address']
 
     ##
     #   Functions to find the nearest charging station
     ##
 
+    # TODO: Trouver structure de données pour stocker stations
     def find_all_near_station(self, stations_list, radius):
         """
-        :param radius:
-        :param stations_list: [ {'id': id, 'lat': lat, 'lng': lng, 'key': key}, ... ]
-        :return:
+        Find all charging station in the radius of this location.
+
+        :param stations_list: A table of id, lat and lng of all charging stations.
+                            [ {'id': id, 'lat': lat, 'lng': lng }, ... ]
+        :type stations_list: table of dict with id (int), lat (float), lng (float).
+
+        :param radius: The radius, in meters, to search for charging station.
+        :type radius: int
         """
-        if self.status:
-            for station in stations_list:
-                try:
-                    distance_between = \
-                        gmaps.distance_matrix((self.lat, self.lng), (station['lat'], station['lng']), 'driving',
+        for station in stations_list:
+            try:
+                distance_between = \
+                    gmaps.distance_matrix((self.lat, self.lng), (station['lat'], station['lng']), 'driving',
                                               'fr-FR')['rows'][0]['elements'][0]['distance']['value']
-                except (TransportError, Timeout):
-                    pass
-                else:
-                    if distance_between <= radius:
-                        self.near_stations.append((distance_between, station['id']))
-        else:
-            raise InvalidLocation('The entered location is invalid.')
+            except (TransportError, Timeout):
+                pass
+            else:
+                if distance_between <= radius:
+                    self.near_stations.append((distance_between, station['id']))
 
     def get_all_near_station(self, station_list, radius=20000):
         self.find_all_near_station(station_list, radius)
