@@ -11,5 +11,5 @@ class Car:
         self.consumption = consumption
 
     def math_distance_max(self, percent):
-        battery = (self.battery / 100) * (100 - percent)
-        return (battery / self.consumption) * 100
+        battery = (self.battery / 100.0) * (100 - percent)
+        return ((battery / self.consumption) * 100) * 1000

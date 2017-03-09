@@ -1,14 +1,9 @@
 from googlemaps.exceptions import TransportError, Timeout
-from settings import gmaps
 from src.exceptions import IllegalArgumentError, InvalidLocation
+from settings import gmaps
 
-
-# TODO: Spécifier.
 
 class Location:
-    """
-
-    """
 
     def __init__(self, **kwargs):
         """
@@ -128,7 +123,7 @@ class Location:
     #   Functions to find the nearest charging station
     ##
 
-    # TODO: Trouver structure de données pour stocker stations
+    # TODO: Cette fonction utilise stations_list. Trouver structure de donnee pour station_list.
     def find_all_near_station(self, stations_list, radius):
         """
         Find all charging station in the radius of this location.
@@ -143,19 +138,45 @@ class Location:
         for station in stations_list:
             try:
                 distance_between = \
-                    gmaps.distance_matrix((self.lat, self.lng), (station['lat'], station['lng']), 'driving',
-                                              'fr-FR')['rows'][0]['elements'][0]['distance']['value']
+                    gmaps.distance_matrix((self.lat, self.lng), (station['lat'], station['lng']), 'driving', 'fr-FR')[
+                        'rows'][0]['elements'][0]['distance']['value']
             except (TransportError, Timeout):
                 pass
             else:
                 if distance_between <= radius:
-                    self.near_stations.append((distance_between, station['id']))
+                    self.near_stations.append((station['id'], distance_between))
 
     def get_all_near_station(self, station_list, radius=20000):
+        """
+        Return all charging station in the radius of this location.
+
+        :param station_list: stations_list: A table of id, lat and lng of all charging stations.
+        :type station_list: stations_list: table of dict with id (int), lat (float), lng (float).
+
+        :param radius: The radius, in meters, to search for charging station.
+        :type radius: int
+
+        :return near_stations: table tuple, each tuple contain the id of a charging station, and
+        the distance from this location.
+        :rtype near_stations: tuple of (int, int).
+        """
         self.find_all_near_station(station_list, radius)
         return self.near_stations
 
     def get_nearest_station(self, station_list, radius=20000):
+        """
+        Return the nearest charging station in the radius of this location.
+
+        :param station_list: stations_list: A table of id, lat and lng of all charging stations.
+        :type station_list: stations_list: table of dict with id (int), lat (float), lng (float).
+
+        :param radius: The radius, in meters, to search for charging station.
+        :type radius: int
+
+        :return nearest_current: Tuple with id of the nearest station, and distance. If there's
+        no station in the radius, return False.
+        :rtype nearest_current: tuple of (int, int)
+        """
         self.find_all_near_station(station_list, radius)
 
         if self.near_stations:
@@ -169,5 +190,5 @@ class Location:
             return False
 
 
-place = Location()
+#place = Location(address="SNCB Mons Station")
 # place.find_all_near_station([{'id': 0, 'lat': 50.4132557, 'lng': 4.0169406, 'key': "ChIJvRKTuK9FwkcRV6Jc8IqyUt4"}])
